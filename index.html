@@ -3730,11 +3730,14 @@ textarea.msg-input::placeholder{color:var(--text-muted)}
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// ── Anthropic API Key ──
+const ANTHROPIC_KEY = "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";
+
 
 // ===================================================
 //  SUPABASE INTEGRATION
 // ===================================================
-const ANTHROPIC_KEY = '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';
+
 const SUPABASE_URL  = 'https://xqlbxcfzhtjegcbpfuml.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxbGJ4Y2Z6aHRqZWdjYnBmdW1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDQyNjksImV4cCI6MjA5MDc4MDI2OX0.v8rLyH5xJSBMeirfPK87jUHeBvSGvO7sXvUm56wbN6g';
 
@@ -7356,7 +7359,7 @@ async function getCwAIReply(userMessage) {
   try {
     var resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
