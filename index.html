@@ -110,7 +110,48 @@ select.login-input{appearance:none;background-image:url("data:image/svg+xml,%3Cs
   width:58px;background:var(--bg-sidebar);border-right:1px solid var(--border);
   display:flex;flex-direction:column;align-items:center;
   padding:12px 0;gap:2px;flex-shrink:0;z-index:10;
+  transition:width 0.25s cubic-bezier(0.4,0,0.2,1);overflow:hidden;
 }
+.nav-rail.expanded{
+  width:200px;align-items:flex-start;
+}
+.nav-rail.expanded .nav-btn{
+  width:calc(200px - 20px);border-radius:10px;justify-content:flex-start;
+  gap:10px;padding:0 12px;
+}
+.nav-rail.expanded .nav-logo-app{
+  margin-left:11px;
+}
+.nav-rail.expanded .nav-search-btn{
+  width:calc(200px - 20px);justify-content:flex-start;gap:10px;padding:0 12px;margin:2px 10px;
+}
+.nav-rail.expanded .nav-tenant-badge{
+  margin-left:10px;
+}
+.nav-rail.expanded .nav-agent-avatar{
+  margin-left:10px;
+}
+.nav-btn-label{
+  font-size:12.5px;font-weight:600;white-space:nowrap;
+  opacity:0;width:0;overflow:hidden;transition:opacity 0.2s,width 0.2s;
+  color:var(--text-secondary);
+}
+.nav-rail.expanded .nav-btn-label{
+  opacity:1;width:auto;
+}
+.nav-rail.expanded .nav-btn.active .nav-btn-label{
+  color:var(--accent);
+}
+.nav-toggle-btn{
+  width:28px;height:28px;border-radius:8px;border:1px solid var(--border);
+  background:var(--bg-input);color:var(--text-muted);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:var(--transition);margin-bottom:6px;flex-shrink:0;
+}
+.nav-toggle-btn:hover{background:var(--bg-hover);color:var(--text-primary)}
+.nav-toggle-btn svg{width:13px;height:13px;transition:transform 0.25s}
+.nav-rail.expanded .nav-toggle-btn svg{transform:rotate(180deg)}
+.nav-rail.expanded .nav-tooltip{display:none}
 .nav-logo-app{
   width:34px;height:34px;border-radius:10px;
   background:linear-gradient(135deg,var(--accent),var(--accent-ai));
@@ -2653,6 +2694,14 @@ textarea.msg-input::placeholder{color:var(--text-muted)}
 
 /* ── MISC ── */
 
+/* Nav rail expanded extras */
+.nav-rail.expanded #navBrandLabel{opacity:1 !important;width:auto !important;margin-left:8px}
+.nav-rail.expanded .nav-search-btn{justify-content:flex-start;gap:10px;padding:0 12px;width:calc(100% - 20px)}
+.nav-rail.expanded .nav-btn{width:calc(100% - 20px);margin:1px 10px;padding:0 12px;justify-content:flex-start;gap:10px}
+.nav-rail.expanded .nav-tenant-badge{margin:0 10px 4px}
+.nav-rail.expanded .nav-agent-avatar{margin:0 10px 8px}
+
+
 /* ══════════════════════════════════════════════
    HELP CENTRE — Public Portal
    ══════════════════════════════════════════════ */
@@ -2999,54 +3048,70 @@ textarea.msg-input::placeholder{color:var(--text-muted)}
 <!-- ────── APP SCREEN ────── -->
 <div id="appScreen" class="screen hidden">
   <!-- Nav Rail -->
-  <nav class="nav-rail">
-    <div class="nav-logo-app" style="position:relative;overflow:hidden" title="HeySync">
-      <span style="color:white;font-size:11px;font-weight:900;letter-spacing:-0.04em;font-family:var(--font)">hs</span>
+  <nav class="nav-rail" id="mainNavRail">
+    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 12px 10px;box-sizing:border-box;flex-shrink:0">
+      <div class="nav-logo-app" style="position:relative;overflow:hidden;flex-shrink:0" title="HeySync">
+        <span style="color:white;font-size:11px;font-weight:900;letter-spacing:-0.04em;font-family:var(--font)">hs</span>
+      </div>
+      <span id="navBrandLabel" style="font-size:13px;font-weight:800;color:var(--text-primary);letter-spacing:-0.03em;opacity:0;width:0;overflow:hidden;transition:opacity 0.2s,width 0.2s;white-space:nowrap">hey<span style="color:var(--accent)">synk</span></span>
+      <button class="nav-toggle-btn" id="navToggleBtn" onclick="toggleNavRail()" title="Expand / Collapse">
+        <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+      </button>
     </div>
-    <button class="nav-search-btn" onclick="openSearch()" title="Search (⌘K)">
+    <button class="nav-search-btn" onclick="openSearch()" title="Search (⌘K)" style="width:calc(100% - 20px);margin:2px 10px">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
+      <span class="nav-btn-label">Search</span>
     </button>
     <button class="nav-btn active" data-view="chat" onclick="switchView('chat')">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
       <span class="nav-badge" id="navChatBadge"></span>
+      <span class="nav-btn-label">Conversations</span>
       <span class="nav-tooltip">Conversations</span>
     </button>
     <button class="nav-btn" data-view="crm" onclick="switchView('crm')">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      <span class="nav-btn-label">Contacts</span>
       <span class="nav-tooltip">CRM / Contacts</span>
-    </button>
-    <button class="nav-btn" data-view="analytics" onclick="switchView('analytics')">
+    </button> onclick="switchView('analytics')">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      <span class="nav-btn-label">Analytics</span>
       <span class="nav-tooltip">Analytics</span>
     </button>
     <button class="nav-btn" data-view="kb" onclick="switchView('kb')">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+      <span class="nav-btn-label">Knowledge Base</span>
       <span class="nav-tooltip">Knowledge Base</span>
     </button>
     <button class="nav-btn" data-view="integrations" onclick="switchView('integrations')">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+      <span class="nav-btn-label">Integrations</span>
       <span class="nav-tooltip">Integrations</span>
     </button>
     <button class="nav-btn" data-view="campaigns" onclick="switchView('campaigns')">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+      <span class="nav-btn-label">Campaigns</span>
       <span class="nav-tooltip">Campaigns</span>
     </button>
     <button class="nav-btn" data-view="widget" onclick="switchView('widget')">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+      <span class="nav-btn-label">Chat Widget</span>
       <span class="nav-tooltip">Chat Widget</span>
     </button>
     <button class="nav-btn" onclick="toggleNotifPanel()" style="position:relative">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
       <span class="bell-badge" id="bellBadge"></span>
+      <span class="nav-btn-label">Notifications</span>
       <span class="nav-tooltip">Notifications</span>
     </button>
     <button class="nav-btn" onclick="toggleVisitorsPanel()" style="position:relative" id="visitorsNavBtn">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="6" opacity=".3"/><circle cx="12" cy="12" r="10" opacity=".1"/><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/><circle cx="5" cy="12" r="1.5" fill="currentColor"/></svg>
       <span class="visitor-counter-badge" id="visitorCountBadge">0</span>
+      <span class="nav-btn-label">Live Visitors</span>
       <span class="nav-tooltip">Live Visitors</span>
     </button>
     <button class="nav-btn" data-view="admin" id="adminNavBtn" onclick="switchView('admin')" style="display:none">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      <span class="nav-btn-label">Admin Panel</span>
       <span class="nav-tooltip">Admin Panel</span>
     </button>
     <div class="nav-spacer"></div>
@@ -3730,6 +3795,7 @@ textarea.msg-input::placeholder{color:var(--text-muted)}
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+const ANTHROPIC_KEY = "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";
 
 // ===================================================
 //  SUPABASE INTEGRATION
@@ -4314,6 +4380,8 @@ function launchApp() {
   syncMobileUI();
   // Sidebar agent footer
   setTimeout(function(){ if(document.getElementById('appSidebar')) renderSidebarAgentFooter(); }, 300);
+  // Nav rail state
+  initNavRailState();
   // Start visitor tracking
   initVisitorTracking();
   // Init campaigns
@@ -4507,7 +4575,7 @@ async function getAISuggestion() {
   btn.disabled = true; btn.innerHTML = '<span style="opacity:.6">Generating…</span>';
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514', max_tokens:1000,
         system:`You are ${agent.name}, a ${agent.role} at ${tenant.name} (${tenant.tagline}). Write a concise, professional support reply (2-4 sentences max). Be warm, direct, and solution-focused. Don't start with "I".`,
@@ -4535,7 +4603,7 @@ async function getAIReply() {
   wrap.appendChild(tid); scrollBottom();
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514', max_tokens:1000,
         system:`You are an AI support assistant for ${tenant.name} (${tenant.tagline}). Respond directly to the customer's latest message. Be helpful, clear, and empathetic. 2-4 sentences max. Don't introduce yourself as AI unless asked.`,
@@ -5245,7 +5313,7 @@ ${body.substring(0,1500)}`,
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
         model:'claude-sonnet-4-20250514', max_tokens:800,
         system:`You are a professional technical writer creating help center content for ${tenant?.name}. Write clear, friendly, and actionable content. Return plain text only — no markdown, no asterisks, no headers with #.`,
@@ -5445,7 +5513,7 @@ async function openEmailPreview(nId) {
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
         model:'claude-sonnet-4-20250514', max_tokens:600,
         system:`You generate professional customer support email notifications. Return ONLY a JSON object with two keys: "subject" (string, concise email subject line) and "body" (string, 3-5 sentence email body using \\n for line breaks). No markdown, no code fences, no extra text — just the raw JSON object.`,
@@ -7360,7 +7428,7 @@ async function getCwAIReply(userMessage) {
   try {
     var resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
@@ -10322,7 +10390,7 @@ async function detectAndTranslate(text, targetLang) {
   try {
     var resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
@@ -10348,7 +10416,7 @@ async function translateText(text, fromLang, toLang) {
   try {
     var resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
@@ -10507,7 +10575,7 @@ async function getCwAIReplyText(userMessage) {
   try {
     var resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
@@ -12596,6 +12664,29 @@ function insertArticleLink(artId, artTitle) {
   var linkHTML = '<a href="#" onclick="event.preventDefault();openArticle(\''+artId+'\')" style="color:var(--accent);text-decoration:underline;cursor:pointer">'+artTitle+'</a>';
   document.execCommand('insertHTML', false, linkHTML);
   showToast('Article link inserted \u2713', 'success');
+}
+
+
+// ── Nav Rail Expand / Collapse ────────────────
+var navRailExpanded = false;
+
+function toggleNavRail() {
+  navRailExpanded = !navRailExpanded;
+  var rail = document.getElementById('mainNavRail');
+  if (rail) rail.classList.toggle('expanded', navRailExpanded);
+  // Persist state
+  try { localStorage.setItem('hs_nav_expanded', navRailExpanded ? '1' : '0'); } catch(e) {}
+}
+
+function initNavRailState() {
+  try {
+    var saved = localStorage.getItem('hs_nav_expanded');
+    if (saved === '1') {
+      navRailExpanded = true;
+      var rail = document.getElementById('mainNavRail');
+      if (rail) rail.classList.add('expanded');
+    }
+  } catch(e) {}
 }
 
 function updateNavBadge() {
