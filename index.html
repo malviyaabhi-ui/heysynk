@@ -3731,7 +3731,7 @@ textarea.msg-input::placeholder{color:var(--text-muted)}
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ── Anthropic API Key ──
-const ANTHROPIC_KEY = "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";
+const ANTHROPIC_KEY = "";
 
 
 // ===================================================
@@ -4509,7 +4509,7 @@ async function getAISuggestion() {
   const btn = document.getElementById('aiSugBtn');
   btn.disabled = true; btn.innerHTML = '<span style="opacity:.6">Generating…</span>';
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('/api/chat', {
       method:'POST', headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514', max_tokens:1000,
@@ -4537,7 +4537,7 @@ async function getAIReply() {
   tid.innerHTML=`<div class="msg-row ai-row"><div class="msg-av ai-av">✦</div><div class="typing-row"><div class="typing-dots"><div class="td"></div><div class="td"></div><div class="td"></div></div><span>AI is generating…</span></div></div>`;
   wrap.appendChild(tid); scrollBottom();
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('/api/chat', {
       method:'POST', headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514', max_tokens:1000,
@@ -5243,7 +5243,7 @@ ${body.substring(0,1500)}`,
   };
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('/api/chat', {
       method:'POST', headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
         model:'claude-sonnet-4-20250514', max_tokens:800,
@@ -5443,7 +5443,7 @@ async function openEmailPreview(nId) {
   const conv = tenant?.conversations.find(c => c.id === n.convId);
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('/api/chat', {
       method:'POST', headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
         model:'claude-sonnet-4-20250514', max_tokens:600,
@@ -7357,7 +7357,7 @@ async function getCwAIReply(userMessage) {
     return { role: m.from === 'user' ? 'user' : 'assistant', content: m.text };
   });
   try {
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+    var resp = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -10318,7 +10318,7 @@ function getLangOptions(selected) {
 async function detectAndTranslate(text, targetLang) {
   if (!widgetConfig.translationEnabled) return {detected:'en', translated:text};
   try {
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+    var resp = await fetch('/api/chat', {
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
@@ -10344,7 +10344,7 @@ async function detectAndTranslate(text, targetLang) {
 async function translateText(text, fromLang, toLang) {
   if (fromLang === toLang) return text;
   try {
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+    var resp = await fetch('/api/chat', {
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
@@ -10503,7 +10503,7 @@ async function getCwAIReplyText(userMessage) {
     return {role: m.from==='user'?'user':'assistant', content: m.text};
   });
   try {
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+    var resp = await fetch('/api/chat', {
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
