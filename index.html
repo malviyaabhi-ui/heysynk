@@ -3734,7 +3734,7 @@ textarea.msg-input::placeholder{color:var(--text-muted)}
 // ===================================================
 //  SUPABASE INTEGRATION
 // ===================================================
-
+const ANTHROPIC_KEY = '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';
 const SUPABASE_URL  = 'https://xqlbxcfzhtjegcbpfuml.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxbGJ4Y2Z6aHRqZWdjYnBmdW1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDQyNjksImV4cCI6MjA5MDc4MDI2OX0.v8rLyH5xJSBMeirfPK87jUHeBvSGvO7sXvUm56wbN6g';
 
@@ -4507,7 +4507,7 @@ async function getAISuggestion() {
   btn.disabled = true; btn.innerHTML = '<span style="opacity:.6">Generating…</span>';
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514', max_tokens:1000,
         system:`You are ${agent.name}, a ${agent.role} at ${tenant.name} (${tenant.tagline}). Write a concise, professional support reply (2-4 sentences max). Be warm, direct, and solution-focused. Don't start with "I".`,
@@ -4535,7 +4535,7 @@ async function getAIReply() {
   wrap.appendChild(tid); scrollBottom();
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514', max_tokens:1000,
         system:`You are an AI support assistant for ${tenant.name} (${tenant.tagline}). Respond directly to the customer's latest message. Be helpful, clear, and empathetic. 2-4 sentences max. Don't introduce yourself as AI unless asked.`,
@@ -5241,7 +5241,7 @@ ${body.substring(0,1500)}`,
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
         model:'claude-sonnet-4-20250514', max_tokens:800,
         system:`You are a professional technical writer creating help center content for ${tenant?.name}. Write clear, friendly, and actionable content. Return plain text only — no markdown, no asterisks, no headers with #.`,
@@ -5441,7 +5441,7 @@ async function openEmailPreview(nId) {
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
         model:'claude-sonnet-4-20250514', max_tokens:600,
         system:`You generate professional customer support email notifications. Return ONLY a JSON object with two keys: "subject" (string, concise email subject line) and "body" (string, 3-5 sentence email body using \\n for line breaks). No markdown, no code fences, no extra text — just the raw JSON object.`,
@@ -7356,7 +7356,7 @@ async function getCwAIReply(userMessage) {
   try {
     var resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
@@ -10317,7 +10317,7 @@ async function detectAndTranslate(text, targetLang) {
   try {
     var resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
@@ -10343,7 +10343,7 @@ async function translateText(text, fromLang, toLang) {
   try {
     var resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
@@ -10502,7 +10502,7 @@ async function getCwAIReplyText(userMessage) {
   try {
     var resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-api-key':ANTHROPIC_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
