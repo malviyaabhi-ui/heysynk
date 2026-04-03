@@ -3015,7 +3015,7 @@ textarea.msg-input::placeholder{color:var(--text-muted)}
       <div class="login-field">
         <label>Workspace URL</label>
         <div class="workspace-input-wrap">
-          <span class="workspace-prefix">spark.ai/</span>
+          <span class="workspace-prefix">app.heysynk.app/</span>
           <input type="text" id="workspaceInput" placeholder="your-company" autocomplete="off">
         </div>
         <div class="login-hint">Try: <b>acmecorp</b>, <b>techflow</b>, <b>startupxyz</b>, or <b>heysync</b> (super admin)</div>
@@ -5543,7 +5543,7 @@ The email should be professional, actionable, and include a call-to-action to vi
     document.getElementById('emailModalContent').innerHTML = `
       <div class="email-chrome">
         <div class="email-field-rows">
-          <div class="efr"><span class="efr-lbl">From</span><span class="efr-val">notifications@spark.ai &lt;no-reply@spark.ai&gt;</span></div>
+          <div class="efr"><span class="efr-lbl">From</span><span class="efr-val">notifications@heysynk.app &lt;no-reply@heysynk.app&gt;</span></div>
           <div class="efr"><span class="efr-lbl">To</span><span class="efr-val">${escHTML(recipientEmail)}</span></div>
           <div class="efr"><span class="efr-lbl">Subject</span><span class="efr-val efr-subject">${escHTML(emailData.subject)}</span></div>
           <div class="efr"><span class="efr-lbl">Time</span><span class="efr-val">${new Date().toLocaleString()}</span></div>
@@ -5644,7 +5644,7 @@ function renderAdminWorkspace() {
     + '<div class="admin-field"><label>Industry / Tagline</label><input class="admin-input" id="wsTagline" value="' + tenant.tagline + '"></div>'
     + '</div>'
     + '<div class="admin-row">'
-    + '<div class="admin-field"><label>Workspace URL</label><input class="admin-input" readonly value="spark.ai/' + tenant.name.toLowerCase().replace(/ /g,'') + '"><div class="admin-input-hint">Cannot be changed</div></div>'
+    + '<div class="admin-field"><label>Workspace URL</label><input class="admin-input" readonly value="app.heysynk.app/' + tenant.name.toLowerCase().replace(/ /g,'') + '"><div class="admin-input-hint">Cannot be changed</div></div>'
     + '<div class="admin-field"><label>Plan</label><input class="admin-input" readonly value="' + tenant.plan + ' Plan"></div>'
     + '</div>'
     + '<button class="admin-save-btn" onclick="saveWorkspaceSettings()">Save Changes</button>'
