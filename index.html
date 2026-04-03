@@ -3385,6 +3385,10 @@ textarea.msg-input::placeholder{color:var(--text-muted)}
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
             Permissions
           </button>
+          <button class="admin-nav-item" onclick="switchAdminPage('roles',this)">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            Roles
+          </button>
           <div class="admin-nav-section">Account</div>
           <button class="admin-nav-item" onclick="switchAdminPage('billing',this)">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
@@ -4430,6 +4434,8 @@ function launchApp() {
   initTranslation();
   // Init routing rules
   initRoutingRules();
+  // Init roles
+  initRoles();
   // Show onboarding only for truly new tenants (never completed it)
   if (tenant && !tenant._onboarded && !localStorage.getItem('hs_onboarded_' + tenant.slug)) {
     setTimeout(function(){ showOnboarding(); }, 600);
@@ -5661,7 +5667,7 @@ function renderAdminPage(page) {
     canned: renderAdminCanned,
     csat: renderAdminCSAT,
     routing: renderAdminRouting,
-    agents: renderAdminAgents, permissions: renderAdminPermissions,
+    agents: renderAdminAgents, permissions: renderAdminPermissions, roles: renderAdminRoles,
     billing: renderAdminBilling, email: renderAdminEmail, activity: renderAdminActivity, danger: renderAdminDanger
   };
   if (pages[page]) area.innerHTML = pages[page]();
@@ -5740,7 +5746,7 @@ function renderAdminAgents() {
       + (!isSelf ? '<button class="agent-admin-btn danger" onclick="removeAgent(\'' + a.id + '\')">Remove</button>' : '')
       + '</div></div>';
   }).join('');
-  const roleOpts = ADMIN_ROLES.map(function(r){ return '<option>' + r + '</option>'; }).join('');
+  const roleOpts = getRoleOptions('');
   return '<div class="admin-page active">'
     + '<div class="admin-page-title">Agents</div>'
     + '<div class="admin-page-sub">Manage team members and their access.</div>'
@@ -12725,6 +12731,281 @@ function initNavRailState() {
       if (rail) rail.classList.add('expanded');
     }
   } catch(e) {}
+}
+
+
+// ===================================================
+//  ROLE MANAGER
+// ===================================================
+
+var ALL_PERMISSIONS = [
+  { id:'view_convs',     label:'View Conversations',      group:'Inbox',   desc:'See all conversations in the shared inbox' },
+  { id:'reply',          label:'Reply to Customers',       group:'Inbox',   desc:'Send messages and replies to customers' },
+  { id:'resolve',        label:'Resolve Conversations',    group:'Inbox',   desc:'Mark conversations as resolved' },
+  { id:'assign',         label:'Assign Conversations',     group:'Inbox',   desc:'Assign conversations to other agents' },
+  { id:'use_ai',         label:'Use AI Features',          group:'Inbox',   desc:'Access AI Reply, AI Suggest, AI Write' },
+  { id:'canned',         label:'Use Canned Responses',     group:'Inbox',   desc:'Insert pre-written shortcuts with /' },
+  { id:'view_crm',       label:'View Contacts (CRM)',      group:'CRM',     desc:'Browse and search the contacts list' },
+  { id:'edit_crm',       label:'Edit Contacts',            group:'CRM',     desc:'Add, edit, or remove contacts and notes' },
+  { id:'view_analytics', label:'View Analytics',           group:'Reports', desc:'Access the analytics dashboard' },
+  { id:'export',         label:'Export Reports',           group:'Reports', desc:'Download CSV/PDF exports' },
+  { id:'view_kb',        label:'View Knowledge Base',      group:'KB',      desc:'Read knowledge base articles' },
+  { id:'edit_kb',        label:'Edit Knowledge Base',      group:'KB',      desc:'Create, edit, and publish articles' },
+  { id:'campaigns',      label:'Manage Campaigns',         group:'Marketing', desc:'Create and edit targeted message campaigns' },
+  { id:'integrations',   label:'View Integrations',        group:'Settings', desc:'See connected integrations and activity' },
+  { id:'widget',         label:'Configure Chat Widget',    group:'Settings', desc:'Change widget appearance and settings' },
+  { id:'admin_panel',    label:'Access Admin Panel',       group:'Admin',   desc:'Enter the admin panel and settings' },
+  { id:'manage_agents',  label:'Manage Agents',            group:'Admin',   desc:'Add, edit, and remove team members' },
+  { id:'manage_roles',   label:'Manage Roles',             group:'Admin',   desc:'Create and edit custom roles' },
+  { id:'billing',        label:'View Billing',             group:'Admin',   desc:'See plan, usage, and payment details' },
+  { id:'danger_zone',    label:'Danger Zone',              group:'Admin',   desc:'Reset workspace and destructive actions' },
+];
+
+function initRoles() {
+  if (tenant && !tenant._customRoles) {
+    tenant._customRoles = [
+      {
+        id: 'role_agent',
+        name: 'Agent',
+        color: '2563eb',
+        description: 'Standard support agent — handles customer conversations',
+        isDefault: true,
+        permissions: ['view_convs','reply','resolve','use_ai','canned','view_crm','view_kb'],
+      },
+      {
+        id: 'role_senior',
+        name: 'Senior Agent',
+        color: '7c3aed',
+        description: 'Experienced agent with assignment and analytics access',
+        isDefault: true,
+        permissions: ['view_convs','reply','resolve','assign','use_ai','canned','view_crm','edit_crm','view_analytics','export','view_kb','edit_kb','campaigns','integrations','widget'],
+      },
+      {
+        id: 'role_support_lead',
+        name: 'Support Lead',
+        color: '059669',
+        description: 'Team lead with full access except billing and danger zone',
+        isDefault: true,
+        permissions: ['view_convs','reply','resolve','assign','use_ai','canned','view_crm','edit_crm','view_analytics','export','view_kb','edit_kb','campaigns','integrations','widget','admin_panel','manage_agents'],
+      },
+      {
+        id: 'role_admin',
+        name: 'Admin',
+        color: '0f172a',
+        description: 'Full access to all features and settings',
+        isDefault: true,
+        permissions: ALL_PERMISSIONS.map(function(p){ return p.id; }),
+      },
+    ];
+  }
+}
+
+// ── Render Roles Admin Page ────────────────────
+function renderAdminRoles() {
+  initRoles();
+  var roles = tenant._customRoles;
+
+  var roleCards = roles.map(function(role) {
+    var permCount = role.permissions.length;
+    return '<div class="admin-card" style="margin-bottom:10px">'
+      + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'
+      + '<div style="width:36px;height:36px;border-radius:10px;background:#'+role.color+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white;flex-shrink:0">'
+      + role.name.charAt(0)
+      + '</div>'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="font-size:13.5px;font-weight:700;color:var(--text-primary)">' + role.name
+      + (role.isDefault ? ' <span style="font-size:10px;background:var(--bg-input);color:var(--text-muted);padding:1px 7px;border-radius:10px;border:1px solid var(--border)">Default</span>' : '')
+      + '</div>'
+      + '<div style="font-size:12px;color:var(--text-muted);margin-top:2px">' + role.description + '</div>'
+      + '</div>'
+      + '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
+      + '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--bg-active);color:var(--accent);border:1px solid var(--accent-glow-strong)">' + permCount + ' permissions</span>'
+      + '<button class="btn-secondary" style="font-size:11.5px;padding:5px 12px" onclick="openRoleEditor(\'' + role.id + '\')">Edit</button>'
+      + (!role.isDefault ? '<button class="btn-secondary" style="font-size:11.5px;padding:5px 10px;color:#ef4444;border-color:#ef4444" onclick="deleteRole(\'' + role.id + '\')">Delete</button>' : '')
+      + '</div>'
+      + '</div>'
+      // Permission chips
+      + '<div style="display:flex;flex-wrap:wrap;gap:5px">'
+      + role.permissions.slice(0, 8).map(function(pid) {
+          var perm = ALL_PERMISSIONS.find(function(p){ return p.id === pid; });
+          return perm ? '<span style="font-size:10.5px;padding:2px 8px;border-radius:10px;background:var(--bg-input);color:var(--text-secondary);border:1px solid var(--border)">' + perm.label + '</span>' : '';
+        }).join('')
+      + (role.permissions.length > 8 ? '<span style="font-size:10.5px;padding:2px 8px;border-radius:10px;background:var(--bg-input);color:var(--text-muted);border:1px solid var(--border)">+' + (role.permissions.length - 8) + ' more</span>' : '')
+      + '</div>'
+      + '</div>';
+  }).join('');
+
+  return '<div class="admin-page active">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+    + '<div><div class="admin-page-title">Roles</div>'
+    + '<div class="admin-page-sub">Create custom roles with specific permissions for your team.</div></div>'
+    + '<button class="btn-primary" onclick="openRoleEditor(null)" style="font-size:12px;padding:7px 14px">+ New Role</button>'
+    + '</div>'
+    + '<div style="background:rgba(37,99,235,0.04);border:1px solid var(--accent-glow-strong);border-radius:var(--radius-sm);padding:10px 14px;font-size:12.5px;color:var(--text-secondary);margin-bottom:14px">'
+    + '\uD83D\uDCA1 Assign roles to agents in the <strong>Agents</strong> tab. Default roles cannot be deleted but can be edited.'
+    + '</div>'
+    + roleCards
+    + '</div>';
+}
+
+// ── Role Editor Modal ──────────────────────────
+function openRoleEditor(roleId) {
+  initRoles();
+  var role = roleId ? tenant._customRoles.find(function(r){ return r.id === roleId; }) : null;
+  var isNew = !role;
+
+  // Build permission groups
+  var groups = {};
+  ALL_PERMISSIONS.forEach(function(p) {
+    if (!groups[p.group]) groups[p.group] = [];
+    groups[p.group].push(p);
+  });
+
+  var permHTML = Object.keys(groups).map(function(group) {
+    return '<div style="margin-bottom:14px">'
+      + '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">' + group + '</div>'
+      + groups[group].map(function(perm) {
+          var checked = role && role.permissions.indexOf(perm.id) >= 0;
+          return '<label style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:background 0.1s;margin-bottom:3px" onmouseenter="this.style.background=\'var(--bg-hover)\'" onmouseleave="this.style.background=\'\'">'
+            + '<input type="checkbox" id="perm_' + perm.id + '"' + (checked ? ' checked' : '') + ' style="accent-color:var(--accent);margin-top:2px;flex-shrink:0">'
+            + '<div><div style="font-size:12.5px;font-weight:600;color:var(--text-primary)">' + perm.label + '</div>'
+            + '<div style="font-size:11px;color:var(--text-muted);margin-top:1px">' + perm.desc + '</div></div>'
+            + '</label>';
+        }).join('')
+      + '</div>';
+  }).join('');
+
+  var COLORS = ['2563eb','7c3aed','059669','dc2626','d97706','0891b2','0f172a','be185d'];
+  var colorPicker = '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+    + COLORS.map(function(col) {
+        var sel = role && role.color === col;
+        return '<div onclick="selectRoleColor(\'' + col + '\')" id="roleColor_' + col + '" style="width:26px;height:26px;border-radius:7px;background:#' + col + ';cursor:pointer;border:2px solid ' + (sel ? '#0f172a' : 'transparent') + ';transition:border-color 0.15s;box-shadow:' + (sel ? '0 0 0 2px var(--accent)' : 'none') + '"></div>';
+      }).join('')
+    + '</div>';
+
+  // Open modal
+  var existing = document.getElementById('roleEditorOverlay');
+  if (existing) existing.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'roleEditorOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto';
+  overlay.onclick = function(e){ if(e.target===overlay) overlay.remove(); };
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'width:560px;background:var(--bg-panel);border-radius:var(--radius);border:1px solid var(--border-strong);box-shadow:0 24px 64px rgba(0,0,0,0.2);overflow:hidden;margin:auto';
+
+  modal.innerHTML = '<div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">'
+    + '<div style="font-size:14px;font-weight:700;color:var(--text-primary)">' + (isNew ? 'New Role' : 'Edit Role: ' + role.name) + '</div>'
+    + '<button onclick="document.getElementById(\'roleEditorOverlay\').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:20px">&times;</button>'
+    + '</div>'
+    + '<div style="padding:20px;max-height:70vh;overflow-y:auto">'
+    // Name
+    + '<div class="re-field"><label class="admin-label">Role Name</label>'
+    + '<input class="admin-input" id="roleNameInput" placeholder="e.g. Technical Support" value="' + (role ? role.name : '') + '" style="padding:9px 12px"></div>'
+    // Description
+    + '<div class="re-field"><label class="admin-label">Description</label>'
+    + '<input class="admin-input" id="roleDescInput" placeholder="Briefly describe what this role can do" value="' + (role ? role.description : '') + '" style="padding:9px 12px"></div>'
+    // Color
+    + '<div class="re-field"><label class="admin-label">Colour</label>'
+    + colorPicker + '</div>'
+    // Select all / none
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px">'
+    + '<div style="font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em">Permissions</div>'
+    + '<div style="display:flex;gap:8px">'
+    + '<button onclick="toggleAllPerms(true)" style="font-size:11.5px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:var(--font);font-weight:600">Select All</button>'
+    + '<button onclick="toggleAllPerms(false)" style="font-size:11.5px;color:var(--text-muted);background:none;border:none;cursor:pointer;font-family:var(--font)">Clear All</button>'
+    + '</div></div>'
+    + permHTML
+    + '</div>'
+    + '<div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">'
+    + '<button class="btn-secondary" onclick="document.getElementById(\'roleEditorOverlay\').remove()">Cancel</button>'
+    + '<button class="btn-primary" onclick="saveRole(\'' + (roleId||'') + '\')">Save Role</button>'
+    + '</div>';
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // Set selected color
+  window._selectedRoleColor = role ? role.color : '2563eb';
+}
+
+function selectRoleColor(col) {
+  window._selectedRoleColor = col;
+  document.querySelectorAll('[id^="roleColor_"]').forEach(function(el) {
+    var isSelected = el.id === 'roleColor_' + col;
+    el.style.border = isSelected ? '2px solid #0f172a' : '2px solid transparent';
+    el.style.boxShadow = isSelected ? '0 0 0 2px var(--accent)' : 'none';
+  });
+}
+
+function toggleAllPerms(checked) {
+  ALL_PERMISSIONS.forEach(function(p) {
+    var el = document.getElementById('perm_' + p.id);
+    if (el) el.checked = checked;
+  });
+}
+
+function saveRole(roleId) {
+  var name = (document.getElementById('roleNameInput')||{}).value.trim();
+  var desc = (document.getElementById('roleDescInput')||{}).value.trim();
+  if (!name) { showToast('Please enter a role name', 'warning'); return; }
+
+  var permissions = ALL_PERMISSIONS.filter(function(p) {
+    var el = document.getElementById('perm_' + p.id);
+    return el && el.checked;
+  }).map(function(p){ return p.id; });
+
+  if (roleId) {
+    var role = tenant._customRoles.find(function(r){ return r.id === roleId; });
+    if (role) {
+      role.name = name;
+      role.description = desc;
+      role.color = window._selectedRoleColor || role.color;
+      role.permissions = permissions;
+    }
+  } else {
+    tenant._customRoles.push({
+      id: 'role_' + Date.now(),
+      name: name,
+      description: desc,
+      color: window._selectedRoleColor || '2563eb',
+      permissions: permissions,
+      isDefault: false,
+    });
+  }
+
+  // Update roles in agent select dropdowns too
+  var overlay = document.getElementById('roleEditorOverlay');
+  if (overlay) overlay.remove();
+  renderAdminPage('roles');
+  showToast('Role saved \u2713', 'success');
+
+  // Refresh the agent add form roles
+  refreshAgentRoleOptions();
+}
+
+function deleteRole(roleId) {
+  if (!confirm('Delete this role? Agents with this role will keep it until reassigned.')) return;
+  tenant._customRoles = tenant._customRoles.filter(function(r){ return r.id !== roleId; });
+  renderAdminPage('roles');
+  showToast('Role deleted', 'warning');
+}
+
+function refreshAgentRoleOptions() {
+  // Update the role select in the agent form if visible
+  var roleSelect = document.getElementById('newAgentRole');
+  if (!roleSelect || !tenant._customRoles) return;
+  roleSelect.innerHTML = tenant._customRoles.map(function(r){
+    return '<option value="' + r.name + '">' + r.name + '</option>';
+  }).join('');
+}
+
+function getRoleOptions(selected) {
+  initRoles();
+  return (tenant._customRoles || []).map(function(r){
+    return '<option value="' + r.name + '"' + (r.name === selected ? ' selected' : '') + '>' + r.name + '</option>';
+  }).join('');
 }
 
 function updateNavBadge() {
