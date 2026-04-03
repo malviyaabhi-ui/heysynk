@@ -2945,6 +2945,7 @@ textarea.msg-input::placeholder{color:var(--text-muted)}
 .notif-gen-text{font-size:12.5px}
 
 </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -3729,6 +3730,351 @@ textarea.msg-input::placeholder{color:var(--text-muted)}
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+
+// ===================================================
+//  SUPABASE INTEGRATION
+// ===================================================
+
+const SUPABASE_URL  = 'https://xqlbxcfzhtjegcbpfuml.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxbGJ4Y2Z6aHRqZWdjYnBmdW1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyMDQyNjksImV4cCI6MjA5MDc4MDI2OX0.v8rLyH5xJSBMeirfPK87jUHeBvSGvO7sXvUm56wbN6g';
+
+var sb = null;
+
+function initSupabase() {
+  try {
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    console.log('Supabase connected');
+  } catch(e) {
+    console.warn('Supabase init failed:', e.message);
+  }
+}
+
+// ── Load tenant from DB ───────────────────────────
+async function loadTenantFromDB(slug) {
+  if (!sb) return null;
+  try {
+    var { data, error } = await sb.from('tenants').select('*').eq('slug', slug).single();
+    if (error || !data) return null;
+    return data;
+  } catch(e) { return null; }
+}
+
+// ── Load agents from DB ───────────────────────────
+async function loadAgentsFromDB(tenantId) {
+  if (!sb) return [];
+  try {
+    var { data } = await sb.from('agents').select('*').eq('tenant_id', tenantId);
+    return data || [];
+  } catch(e) { return []; }
+}
+
+// ── Load conversations from DB ────────────────────
+async function loadConversationsFromDB(tenantId) {
+  if (!sb) return [];
+  try {
+    var { data } = await sb
+      .from('conversations')
+      .select('*, contacts(name, email, company), agents(name)')
+      .eq('tenant_id', tenantId)
+      .order('updated_at', { ascending: false });
+    return (data || []).map(function(c) {
+      return {
+        id: c.id,
+        name: c.contacts ? c.contacts.name : 'Unknown',
+        email: c.contacts ? c.contacts.email : '',
+        company: c.contacts ? c.contacts.company : '',
+        status: c.status,
+        channel: c.channel,
+        priority: c.priority,
+        tags: c.tags || [],
+        assignedTo: c.assigned_to,
+        time: new Date(c.updated_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+        preview: 'Click to load messages...',
+        unread: false,
+        messages: [],
+        color: stringToColor(c.contacts ? c.contacts.name : 'U'),
+        initials: getInitials(c.contacts ? c.contacts.name : 'U'),
+        _fromDB: true,
+        _dbId: c.id,
+      };
+    });
+  } catch(e) { return []; }
+}
+
+// ── Load messages for a conversation ─────────────
+async function loadMessagesFromDB(convId) {
+  if (!sb) return [];
+  try {
+    var { data } = await sb
+      .from('messages')
+      .select('*')
+      .eq('conversation_id', convId)
+      .order('created_at', { ascending: true });
+    return (data || []).map(function(m) {
+      return {
+        id: m.id,
+        from: m.sender_type,
+        text: m.text,
+        time: new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+      };
+    });
+  } catch(e) { return []; }
+}
+
+// ── Save message to DB ────────────────────────────
+async function saveMessageToDB(convId, senderType, text, senderId) {
+  if (!sb || !convId) return;
+  try {
+    await sb.from('messages').insert({
+      conversation_id: convId,
+      sender_type: senderType,
+      sender_id: senderId || null,
+      text: text,
+    });
+    // Update conversation updated_at
+    await sb.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', convId);
+  } catch(e) { console.warn('saveMessageToDB failed:', e.message); }
+}
+
+// ── Save new conversation to DB ───────────────────
+async function saveConversationToDB(tenantId, contactId, channel) {
+  if (!sb) return null;
+  try {
+    var { data } = await sb.from('conversations').insert({
+      tenant_id: tenantId,
+      contact_id: contactId,
+      channel: channel || 'live_chat',
+      status: 'open',
+    }).select().single();
+    return data ? data.id : null;
+  } catch(e) { return null; }
+}
+
+// ── Save contact to DB ────────────────────────────
+async function saveContactToDB(tenantId, name, email, company) {
+  if (!sb) return null;
+  try {
+    // Check if contact exists
+    var { data: existing } = await sb.from('contacts').select('id').eq('tenant_id', tenantId).eq('email', email).single();
+    if (existing) return existing.id;
+    var { data } = await sb.from('contacts').insert({
+      tenant_id: tenantId,
+      name: name,
+      email: email,
+      company: company || '',
+    }).select().single();
+    return data ? data.id : null;
+  } catch(e) { return null; }
+}
+
+// ── Load contacts from DB ─────────────────────────
+async function loadContactsFromDB(tenantId) {
+  if (!sb) return [];
+  try {
+    var { data } = await sb.from('contacts').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
+    return (data || []).map(function(c) {
+      return {
+        id: c.id,
+        name: c.name,
+        email: c.email || '',
+        company: c.company || '',
+        status: c.status || 'active',
+        convs: 0,
+        last: new Date(c.created_at).toLocaleDateString(),
+        color: stringToColor(c.name),
+        initials: getInitials(c.name),
+        location: c.location || '',
+        notes: c.notes || '',
+        _fromDB: true,
+      };
+    });
+  } catch(e) { return []; }
+}
+
+// ── Load KB articles from DB ──────────────────────
+async function loadArticlesFromDB(tenantId) {
+  if (!sb) return [];
+  try {
+    var { data } = await sb.from('articles').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false });
+    return (data || []).map(function(a) {
+      return {
+        id: a.id,
+        title: a.title,
+        body: a.body || '',
+        category: a.category || 'General',
+        status: a.status || 'published',
+        views: a.views || 0,
+        tags: a.tags || [],
+        updated: new Date(a.updated_at).toLocaleDateString(),
+        _fromDB: true,
+      };
+    });
+  } catch(e) { return []; }
+}
+
+// ── Save article to DB ────────────────────────────
+async function saveArticleToDB(tenantId, article) {
+  if (!sb) return;
+  try {
+    if (article._fromDB && article.id) {
+      await sb.from('articles').update({
+        title: article.title,
+        body: article.body,
+        category: article.category,
+        status: article.status,
+        tags: article.tags,
+        updated_at: new Date().toISOString(),
+      }).eq('id', article.id);
+    } else {
+      var { data } = await sb.from('articles').insert({
+        tenant_id: tenantId,
+        title: article.title,
+        body: article.body || '',
+        category: article.category || 'General',
+        status: article.status || 'published',
+        tags: article.tags || [],
+      }).select().single();
+      if (data) article.id = data.id;
+      article._fromDB = true;
+    }
+  } catch(e) { console.warn('saveArticleToDB failed:', e.message); }
+}
+
+// ── Real-time subscription ────────────────────────
+function subscribeToConversations(tenantId) {
+  if (!sb) return;
+  sb.channel('conversations:' + tenantId)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'messages',
+    }, function(payload) {
+      // New message arrived — reload if it's for active conversation
+      if (payload.new && payload.new.conversation_id === activeConvId) {
+        var conv = tenant.conversations.find(function(c){ return c.id === activeConvId; });
+        if (conv && payload.new.sender_type !== 'agent') {
+          conv.messages.push({
+            from: payload.new.sender_type,
+            text: payload.new.text,
+            time: new Date(payload.new.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+          });
+          renderMessages(conv);
+          scrollBottom();
+        }
+      }
+    })
+    .subscribe();
+}
+
+// ── Patch launchApp to load from DB ──────────────
+var _origLaunchApp = null;
+
+async function launchAppWithDB() {
+  if (!sb || !tenant) {
+    // No DB connection — use demo data as fallback
+    return false;
+  }
+
+  showLoadingToast('Loading your workspace...');
+
+  try {
+    // Load real data
+    var dbTenant = await loadTenantFromDB(tenant.slug);
+    if (dbTenant) {
+      tenant._dbId = dbTenant.id;
+      tenant.name  = dbTenant.name || tenant.name;
+      tenant.plan  = dbTenant.plan || tenant.plan;
+
+      // Load conversations
+      var dbConvs = await loadConversationsFromDB(dbTenant.id);
+      if (dbConvs.length > 0) {
+        // Merge DB conversations with demo ones
+        tenant.conversations = dbConvs.concat(
+          tenant.conversations.filter(function(c){ return !c._fromDB; }).slice(0, 3)
+        );
+      }
+
+      // Load contacts
+      var dbContacts = await loadContactsFromDB(dbTenant.id);
+      if (dbContacts.length > 0) {
+        tenant.contacts = dbContacts.concat(
+          tenant.contacts.filter(function(c){ return !c._fromDB; }).slice(0, 3)
+        );
+      }
+
+      // Load articles
+      var dbArticles = await loadArticlesFromDB(dbTenant.id);
+      if (dbArticles.length > 0) {
+        tenant.articles = dbArticles.concat(
+          tenant.articles.filter(function(a){ return !a._fromDB; }).slice(0, 3)
+        );
+      }
+
+      // Subscribe to real-time updates
+      subscribeToConversations(dbTenant.id);
+    }
+    hideLoadingToast();
+    return true;
+  } catch(e) {
+    console.warn('DB load failed, using demo data:', e.message);
+    hideLoadingToast();
+    return false;
+  }
+}
+
+// ── Patch openConversation to load messages from DB
+var _origOpenConversation = null;
+
+function initDBPatches() {
+  // Patch sendMsg to also save to DB
+  var _origSendMsg = sendMsg;
+  sendMsg = async function() {
+    var inp = document.getElementById('msgInput');
+    if (!inp) return;
+    var text = inp.value.trim();
+    if (!text) return;
+
+    // Call original sendMsg
+    _origSendMsg();
+
+    // Also save to DB
+    var conv = tenant.conversations.find(function(c){ return c.id === activeConvId; });
+    if (conv && conv._fromDB && tenant._dbId) {
+      await saveMessageToDB(conv._dbId || conv.id, 'agent', text, agent ? agent.id : null);
+    }
+  };
+
+  console.log('DB patches applied');
+}
+
+// ── Helper: show/hide loading toast ──────────────
+function showLoadingToast(msg) {
+  var existing = document.getElementById('_loadingToast');
+  if (existing) existing.remove();
+  var t = document.createElement('div');
+  t.id = '_loadingToast';
+  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0f172a;color:white;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;display:flex;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(0,0,0,0.2)';
+  t.innerHTML = '<div style="width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite"></div>' + msg;
+  document.body.appendChild(t);
+}
+
+function hideLoadingToast() {
+  var t = document.getElementById('_loadingToast');
+  if (t) t.remove();
+}
+
+// ── String helpers ────────────────────────────────
+function stringToColor(str) {
+  var colors = ['#2563eb','#7c3aed','#059669','#d97706','#dc2626','#0891b2','#65a30d'];
+  var hash = 0;
+  for (var i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function getInitials(name) {
+  return name.split(' ').map(function(w){ return w[0]; }).join('').substring(0,2).toUpperCase();
+}
+
 // ═══════════════════════════════════════════════
 //  TENANT DATA
 // ═══════════════════════════════════════════════
@@ -3982,6 +4328,15 @@ function launchApp() {
   if (tenant && !tenant._onboarded) {
     setTimeout(function(){ showOnboarding(); }, 600);
   }
+  // Load real data from Supabase
+  launchAppWithDB().then(function(loaded) {
+    if (loaded) {
+      renderConvList();
+      renderCRM();
+      renderKB();
+      initDBPatches();
+    }
+  });
 }
 
 function logout() {
