@@ -4424,6 +4424,8 @@ function launchApp() {
   setTimeout(function(){ if(document.getElementById('appSidebar')) renderSidebarAgentFooter(); }, 300);
   // Nav rail state
   initNavRailState();
+  // Apply role restrictions
+  setTimeout(applyRoleRestrictions, 100);
   // Start visitor tracking
   initVisitorTracking();
   // Init campaigns
@@ -4440,6 +4442,8 @@ function launchApp() {
   if (tenant && !tenant._onboarded && !localStorage.getItem('hs_onboarded_' + tenant.slug)) {
     setTimeout(function(){ showOnboarding(); }, 600);
   }
+  // Apply role restrictions
+  setTimeout(initRBAC, 150);
   // Load real data from Supabase
   launchAppWithDB().then(function(loaded) {
     if (loaded) {
@@ -4479,7 +4483,7 @@ function switchView(view) {
   sidebar.style.display = view === 'chat' ? 'flex' : 'none';
   if (view !== 'chat') { closeRightPanel(); }
   if (view === 'analytics') { setTimeout(initAnalyticsSidebar, 100); }
-  if (view === 'admin') { renderAdminPage('workspace'); }
+  if (view === 'admin') { renderAdminPage('workspace'); setTimeout(applyAdminNavRestrictions, 100); }
   if (view === 'widget') { initWidgetView(); }
   if (view === 'campaigns') { renderCampaignsView(); }
   if (view === 'integrations') { renderIntegrationsView(); }
@@ -13006,6 +13010,285 @@ function getRoleOptions(selected) {
   return (tenant._customRoles || []).map(function(r){
     return '<option value="' + r.name + '"' + (r.name === selected ? ' selected' : '') + '>' + r.name + '</option>';
   }).join('');
+}
+
+
+// =============================================
+//  ROLE-BASED ACCESS CONTROL
+// =============================================
+
+// Check if current agent has a permission
+function agentCan(permId) {
+  if (!agent || !tenant) return false;
+  // Super admin always has all permissions
+  if (agent.role === 'Admin' || agent.role === 'admin') return true;
+  // Find the role
+  initRoles();
+  var role = (tenant._customRoles || []).find(function(r){ return r.name === agent.role; });
+  if (!role) return true; // fallback - allow if role not found
+  return role.permissions.indexOf(permId) >= 0;
+}
+
+// Apply view restrictions based on role
+function applyRoleRestrictions() {
+  if (!agent || !tenant) return;
+  initRoles();
+  var role = (tenant._customRoles || []).find(function(r){ return r.name === agent.role; });
+  var perms = role ? role.permissions : ALL_PERMISSIONS.map(function(p){ return p.id; });
+
+  // Nav rail visibility
+  var navMap = {
+    'crm':          'view_crm',
+    'analytics':    'view_analytics',
+    'kb':           'view_kb',
+    'integrations': 'integrations',
+    'campaigns':    'campaigns',
+    'widget':       'widget',
+    'admin':        'admin_panel',
+  };
+
+  Object.keys(navMap).forEach(function(view) {
+    var btn = document.querySelector('.nav-btn[data-view="'+view+'"]');
+    if (!btn) return;
+    var hasPerm = perms.indexOf(navMap[view]) >= 0;
+    btn.style.display = hasPerm ? '' : 'none';
+    btn.style.opacity = hasPerm ? '1' : '0.3';
+    btn.style.pointerEvents = hasPerm ? '' : 'none';
+  });
+
+  // Admin panel button
+  var adminBtn = document.getElementById('adminNavBtn');
+  if (adminBtn) {
+    var canAdmin = perms.indexOf('admin_panel') >= 0;
+    adminBtn.style.display = canAdmin ? '' : 'none';
+  }
+
+  // Hide AI buttons if no ai permission
+  if (perms.indexOf('use_ai') < 0) {
+    document.querySelectorAll('[onclick*="getAI"], [onclick*="aiSuggest"], .ai-btn, #aiWritingBtn').forEach(function(el){ el.style.display='none'; });
+  }
+
+  // Show role badge on agent avatar tooltip
+  var roleLabel = document.getElementById('navAgentNameLabel');
+  if (roleLabel) roleLabel.title = agent.role;
+}
+
+// Patch switchView to check permissions
+var _origSwitchViewRBAC = switchView;
+switchView = function(view) {
+  // Check permission before switching
+  var permMap = {
+    crm:         'view_crm',
+    analytics:   'view_analytics',
+    kb:          'view_kb',
+    integrations:'integrations',
+    campaigns:   'campaigns',
+    widget:      'widget',
+    admin:       'admin_panel',
+  };
+  if (permMap[view] && !agentCan(permMap[view])) {
+    showToast('Your role does not have access to this section', 'warning');
+    return;
+  }
+  _origSwitchViewRBAC(view);
+};
+
+
+// ===================================================
+//  ROLE-BASED ACCESS CONTROL
+// ===================================================
+
+// Map view names to required permissions
+var VIEW_PERMISSIONS = {
+  'chat':         'view_convs',
+  'crm':          'view_crm',
+  'analytics':    'view_analytics',
+  'kb':           'view_kb',
+  'integrations': 'integrations',
+  'campaigns':    'campaigns',
+  'widget':       'widget',
+  'admin':        'admin_panel',
+};
+
+// Map admin sub-pages to permissions
+var ADMIN_PAGE_PERMISSIONS = {
+  'workspace':    'admin_panel',
+  'branding':     'admin_panel',
+  'agents':       'manage_agents',
+  'canned':       'admin_panel',
+  'csat':         'admin_panel',
+  'routing':      'admin_panel',
+  'permissions':  'admin_panel',
+  'roles':        'manage_roles',
+  'billing':      'billing',
+  'email':        'admin_panel',
+  'activity':     'admin_panel',
+  'danger':       'danger_zone',
+};
+
+function getAgentPermissions() {
+  if (!agent || !tenant) return [];
+  initRoles();
+  var role = (tenant._customRoles || []).find(function(r){ return r.name === agent.role; });
+  // Admins always have everything
+  if (agent.role === 'Admin' || !role) return ALL_PERMISSIONS.map(function(p){ return p.id; });
+  return role.permissions || [];
+}
+
+function agentCan(permission) {
+  return getAgentPermissions().indexOf(permission) >= 0;
+}
+
+function agentCanView(view) {
+  var perm = VIEW_PERMISSIONS[view];
+  if (!perm) return true; // unknown views are allowed
+  return agentCan(perm);
+}
+
+// ── Apply restrictions after login ────────────────
+function applyRoleRestrictions() {
+  if (!agent || !tenant) return;
+  var perms = getAgentPermissions();
+
+  // Hide/show nav buttons based on permissions
+  document.querySelectorAll('.nav-btn[data-view]').forEach(function(btn) {
+    var view = btn.dataset.view;
+    var allowed = agentCanView(view);
+    btn.style.display = allowed ? '' : 'none';
+  });
+
+  // Hide admin nav button if no admin access
+  var adminBtn = document.getElementById('adminNavBtn');
+  if (adminBtn) adminBtn.style.display = agentCan('admin_panel') ? '' : 'none';
+
+  // Show role badge in header
+  showRoleBadge();
+}
+
+function showRoleBadge() {
+  // Add a small role pill next to agent avatar in expanded nav
+  var label = document.getElementById('navAgentNameLabel');
+  if (label && agent) {
+    label.textContent = agent.name;
+    // Add role below name
+    var roleSpan = label.nextElementSibling;
+    if (roleSpan) {
+      roleSpan.innerHTML = '<span style="width:5px;height:5px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0"></span>'
+        + ' ' + agent.role + ' \u00b7 Sign out';
+    }
+  }
+}
+
+// ── Patch switchView to enforce permissions ────────
+var _origSwitchViewRBAC = null;
+function initRBAC() {
+  // Wrap switchView
+  var _prev = switchView;
+  switchView = function(view) {
+    if (!agentCanView(view)) {
+      showAccessDenied(view);
+      return;
+    }
+    _prev(view);
+  };
+
+  // Wrap switchAdminPage too
+  var _prevAdmin = switchAdminPage;
+  switchAdminPage = function(page, btn) {
+    var perm = ADMIN_PAGE_PERMISSIONS[page] || 'admin_panel';
+    if (!agentCan(perm)) {
+      showToast('Your role doesn\'t have access to this section', 'warning');
+      return;
+    }
+    _prevAdmin(page, btn);
+  };
+
+  applyRoleRestrictions();
+}
+
+function showAccessDenied(view) {
+  var viewNames = {
+    'chat':'Conversations','crm':'Contacts','analytics':'Analytics',
+    'kb':'Knowledge Base','integrations':'Integrations','campaigns':'Campaigns',
+    'widget':'Chat Widget','admin':'Admin Panel'
+  };
+  var name = viewNames[view] || view;
+  showToast('Your role doesn\'t have access to ' + name, 'warning');
+
+  // Show a blocked overlay on the main content area briefly
+  var existing = document.getElementById('accessDeniedMsg');
+  if (existing) existing.remove();
+
+  var msg = document.createElement('div');
+  msg.id = 'accessDeniedMsg';
+  msg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);'
+    + 'background:var(--bg-panel);border:1px solid var(--border-strong);border-radius:var(--radius);'
+    + 'padding:32px 40px;text-align:center;z-index:400;box-shadow:0 8px 32px rgba(0,0,0,0.15);'
+    + 'animation:floatIn 0.2s cubic-bezier(0.4,0,0.2,1)';
+  msg.innerHTML = '<div style="font-size:36px;margin-bottom:12px">\uD83D\uDD12</div>'
+    + '<div style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:6px">Access Restricted</div>'
+    + '<div style="font-size:12.5px;color:var(--text-muted);max-width:260px">'
+    + 'Your role (' + agent.role + ') doesn\'t have permission to access ' + name + '.'
+    + '</div>'
+    + '<div style="font-size:11.5px;color:var(--text-muted);margin-top:10px">Contact your admin to request access.</div>';
+
+  document.body.appendChild(msg);
+  setTimeout(function(){ if(msg.parentNode) msg.remove(); }, 3000);
+}
+
+// ── Admin panel: hide restricted nav items ─────────
+function applyAdminNavRestrictions() {
+  var restrictedPages = {
+    'billing':  'billing',
+    'danger':   'danger_zone',
+    'roles':    'manage_roles',
+  };
+
+  document.querySelectorAll('.admin-nav-item').forEach(function(btn) {
+    var onclick = btn.getAttribute('onclick') || '';
+    Object.keys(restrictedPages).forEach(function(page) {
+      if (onclick.includes("'" + page + "'")) {
+        var perm = restrictedPages[page];
+        if (!agentCan(perm)) {
+          btn.style.opacity = '0.4';
+          btn.style.pointerEvents = 'none';
+          btn.title = 'Requires ' + perm + ' permission';
+        }
+      }
+    });
+  });
+}
+
+// ── Restrict reply/resolve actions by permission ───
+function canReply() {
+  if (!agentCan('reply')) {
+    showToast('Your role doesn\'t have reply permission', 'warning');
+    return false;
+  }
+  return true;
+}
+
+function canResolve() {
+  if (!agentCan('resolve')) {
+    showToast('Your role doesn\'t have resolve permission', 'warning');
+    return false;
+  }
+  return true;
+}
+
+// ── Role indicator in the conversation header ──────
+function getRoleIndicatorHTML() {
+  if (!agent) return '';
+  var perm = getAgentPermissions();
+  var roleColor = {
+    'Admin': '#0f172a',
+    'Support Lead': '#059669',
+    'Senior Agent': '#7c3aed',
+    'Agent': '#2563eb',
+  };
+  var col = roleColor[agent.role] || '#2563eb';
+  return '<span style="font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(0,0,0,0.06);color:' + col + ';border:1px solid ' + col + '22">'
+    + agent.role + '</span>';
 }
 
 function updateNavBadge() {
