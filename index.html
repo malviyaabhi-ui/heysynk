@@ -4864,9 +4864,9 @@ function renderAnalytics() {
   var _s=document.getElementById('analyticsSubtitle');if(_s)_s.textContent = `${tenant.name} · ${tenant.plan} Plan`;
   const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const maxVal = Math.max(...a.daily);
-  const barW = 44, gap = 16, totalW = a.daily.length * (barW + gap) - gap;
+  const barW = 32, gap = 14, totalW = a.daily.length * (barW + gap) - gap;
   const bars = a.daily.map((v,i) => {
-    const h = Math.round((v/maxVal)*110);
+    const h = Math.round((v/maxVal)*90);
     const x = i*(barW+gap);
     const y = 115-h;
     return `<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="6" fill="${tenant.accent}" opacity="0.75"/>
