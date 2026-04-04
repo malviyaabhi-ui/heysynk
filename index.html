@@ -4477,6 +4477,10 @@ function logout() {
 //  NAVIGATION
 // ═══════════════════════════════════════════════
 function switchView(view) {
+  if (agent && agent.role !== "Admin") {
+    var _vm = {crm:"view_crm",analytics:"view_analytics",kb:"view_kb",integrations:"integrations",campaigns:"campaigns",widget:"widget",admin:"admin_panel"};
+    if (_vm[view] && agentCan(_vm[view]) === false) { showAccessDenied(view); return; }
+  }
   activeView = view;
   document.querySelectorAll('.nav-btn[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === view+'View'));
@@ -13075,26 +13079,6 @@ function applyRoleRestrictions() {
   if (roleLabel) roleLabel.title = agent.role;
 }
 
-// Patch switchView to check permissions
-var _origSwitchViewRBAC = switchView;
-switchView = function(view) {
-  // Check permission before switching
-  var permMap = {
-    crm:         'view_crm',
-    analytics:   'view_analytics',
-    kb:          'view_kb',
-    integrations:'integrations',
-    campaigns:   'campaigns',
-    widget:      'widget',
-    admin:       'admin_panel',
-  };
-  if (permMap[view] && !agentCan(permMap[view])) {
-    showToast('Your role does not have access to this section', 'warning');
-    return;
-  }
-  _origSwitchViewRBAC(view);
-};
-
 
 // ===================================================
 //  ROLE-BASED ACCESS CONTROL
@@ -13182,27 +13166,6 @@ function showRoleBadge() {
 var _origSwitchViewRBAC = null;
 function initRBAC() {
   if (initRBAC._done) return; initRBAC._done = true;
-  // Wrap switchView
-  var _prev = switchView;
-  switchView = function(view) {
-    if (!agentCanView(view)) {
-      showAccessDenied(view);
-      return;
-    }
-    _prev(view);
-  };
-
-  // Wrap switchAdminPage too
-  var _prevAdmin = switchAdminPage;
-  switchAdminPage = function(page, btn) {
-    var perm = ADMIN_PAGE_PERMISSIONS[page] || 'admin_panel';
-    if (!agentCan(perm)) {
-      showToast('Your role doesn\'t have access to this section', 'warning');
-      return;
-    }
-    _prevAdmin(page, btn);
-  };
-
   applyRoleRestrictions();
 }
 
