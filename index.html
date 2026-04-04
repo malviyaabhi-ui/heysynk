@@ -3298,7 +3298,7 @@ textarea.msg-input::placeholder{color:var(--text-muted)}
             <div class="view-subtitle" id="analyticsSubtitle"></div>
           </div>
           <div style="display:flex;align-items:center;gap:8px">
-            <div style="font-size:11.5px;color:var(--text-muted);background:var(--bg-input);padding:5px 12px;border-radius:20px;border:1px solid var(--border)">Last 30 days</div>
+            <select onchange="changeAnalyticsRange(this.value)" style="font-size:11.5px;color:var(--text-muted);background:var(--bg-input);padding:5px 12px;border-radius:20px;border:1px solid var(--border);cursor:pointer;font-family:var(--font);outline:none;-webkit-appearance:none;padding-right:28px"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option><option value="180">Last 6 months</option><option value="365">Last year</option></select>
             <button class="btn-primary" onclick="openExportModal()" style="font-size:12px;padding:7px 14px;display:flex;align-items:center;gap:5px">
               <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="width:13px;height:13px"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
               Export
