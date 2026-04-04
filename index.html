@@ -3298,7 +3298,7 @@ textarea.msg-input::placeholder{color:var(--text-muted)}
             <div class="view-subtitle" id="analyticsSubtitle"></div>
           </div>
           <div style="display:flex;align-items:center;gap:8px">
-            <select id="analyticsRange" onchange="changeAnalyticsRange(this.value)" style="font-size:12px;color:var(--text-secondary);background:var(--bg-input);padding:5px 14px;border-radius:20px;border:1px solid var(--border);cursor:pointer;font-family:var(--font);font-weight:600;outline:none"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option><option value="180">Last 6 months</option><option value="365">Last 12 months</option></select>
+            <div style="font-size:11.5px;color:var(--text-muted);background:var(--bg-input);padding:5px 12px;border-radius:20px;border:1px solid var(--border)">Last 30 days</div>
             <button class="btn-primary" onclick="openExportModal()" style="font-size:12px;padding:7px 14px;display:flex;align-items:center;gap:5px">
               <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="width:13px;height:13px"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
               Export
@@ -4831,19 +4831,16 @@ function renderAnalytics() {
   if (!tenant) return;
   const a = tenant.analytics;
   var _s=document.getElementById('analyticsSubtitle');if(_s)_s.textContent = `${tenant.name} · ${tenant.plan} Plan`;
-  const range = parseInt((document.getElementById('analyticsRange')||{}).value||'7');
-  const allDays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const days = range<=7 ? allDays : range<=30 ? ['W1','W2','W3','W4'] : range<=90 ? ['Jan','Feb','Mar'] : range<=180 ? ['M1','M2','M3','M4','M5','M6'] : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const displayData = a.daily.slice(0, days.length);
-  const maxVal = Math.max(...displayData) || 1;
-  const svgH = 160, labelH = 20;
-  const barW = 44, gap = 16;
-  const totalW = days.length * (barW + gap) - gap;
-  const bars = displayData.map((v,i) => {
-    const h = Math.max(4, Math.round((v/maxVal) * (svgH - labelH - 20)));
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const maxVal = Math.max(...a.daily);
+  const barW = 44, gap = 16, totalW = a.daily.length * (barW + gap) - gap;
+  const bars = a.daily.map((v,i) => {
+    const h = Math.round((v/maxVal)*110);
     const x = i*(barW+gap);
-    const y = svgH - labelH - h;
-    return `<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="6" fill="${tenant.accent}" opacity="0.82"/><text x="${x+barW/2}" y="${svgH-4}" text-anchor="middle" fill="#8890a4" font-size="11" font-family="Inter,sans-serif">${days[i]}</text><text x="${x+barW/2}" y="${y-5}" text-anchor="middle" fill="#50566a" font-size="10" font-family="Inter,sans-serif">${v}</text>`;
+    const y = 115-h;
+    return `<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="6" fill="${tenant.accent}" opacity="0.75"/>
+      <text x="${x+barW/2}" y="132" text-anchor="middle" fill="#50566a" font-size="11" font-family="Bricolage Grotesque,sans-serif">${days[i]}</text>
+      <text x="${x+barW/2}" y="${y-5}" text-anchor="middle" fill="#8890a4" font-size="10" font-family="Bricolage Grotesque,sans-serif">${v}</text>`;
   }).join('');
   // Channels
   const chEntries = Object.entries(a.channels);
@@ -4876,9 +4873,9 @@ function renderAnalytics() {
     <div class="charts-row">
       <div class="chart-card">
         <div class="chart-title">Conversation Volume</div>
-        <div class="chart-sub" id="chartRangeLabel">Last 7 days</div>
+        <div class="chart-sub">Last 7 days</div>
         <div class="chart-area">
-          <svg viewBox="0 0 ${totalW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:180px">${bars}</svg>
+          <svg viewBox="0 0 ${totalW} 145" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">${bars}</svg>
         </div>
       </div>
       <div class="chart-card">
