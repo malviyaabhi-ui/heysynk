@@ -4456,6 +4456,7 @@ function launchApp() {
 }
 
 function logout() {
+  initRBAC._done = false;
   if (tenant) tenant._onboarded = true; // keep onboarded state
   tenant = null; agent = null; activeConvId = null;
   notifications = [];
@@ -13180,6 +13181,7 @@ function showRoleBadge() {
 // ── Patch switchView to enforce permissions ────────
 var _origSwitchViewRBAC = null;
 function initRBAC() {
+  if (initRBAC._done) return; initRBAC._done = true;
   // Wrap switchView
   var _prev = switchView;
   switchView = function(view) {
