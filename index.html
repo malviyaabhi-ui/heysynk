@@ -7810,6 +7810,7 @@ function showOnboarding() {
 function closeOnboarding() {
   var el = document.getElementById('onboardingScreen');
   el.style.opacity = '0';
+  if (tenant) { localStorage.setItem('hs_ob_' + (tenant.slug||'ws'), '1'); tenant._onboarded = true; }
   setTimeout(function(){ el.classList.remove('show'); el.style.opacity = ''; }, 400);
   // Apply any branding changes
   if (obData.widgetColor && tenant) {
@@ -13135,9 +13136,6 @@ function getAgentPermissions() {
   return role.permissions || [];
 }
 
-function agentCan(permission) {
-  return getAgentPermissions().indexOf(permission) >= 0;
-}
 
 function agentCanView(view) {
   var perm = VIEW_PERMISSIONS[view];
