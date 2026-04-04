@@ -2966,7 +2966,7 @@ textarea.msg-input::placeholder{color:var(--text-muted)}
       <div class="login-field">
         <label>Workspace URL</label>
         <div class="workspace-input-wrap">
-          <span class="workspace-prefix">spark.ai/</span>
+          <span class="workspace-prefix">app.heysynk.app/</span>
           <input type="text" id="workspaceInput" placeholder="your-company" autocomplete="off">
         </div>
         <div class="login-hint">Try: <b>acmecorp</b>, <b>techflow</b>, <b>startupxyz</b>, or <b>heysync</b> (super admin)</div>
@@ -3000,7 +3000,7 @@ textarea.msg-input::placeholder{color:var(--text-muted)}
 <div id="appScreen" class="screen hidden">
   <!-- Nav Rail -->
   <nav class="nav-rail">
-    <div class="nav-logo-app" style="position:relative;overflow:hidden" title="HeySync">
+    <div class="nav-logo-app" style="position:relative;overflow:hidden" title="heySynk">
       <span style="color:white;font-size:11px;font-weight:900;letter-spacing:-0.04em;font-family:var(--font)">hs</span>
     </div>
     <button class="nav-search-btn" onclick="openSearch()" title="Search (⌘K)">
@@ -5478,7 +5478,7 @@ The email should be professional, actionable, and include a call-to-action to vi
     document.getElementById('emailModalContent').innerHTML = `
       <div class="email-chrome">
         <div class="email-field-rows">
-          <div class="efr"><span class="efr-lbl">From</span><span class="efr-val">notifications@spark.ai &lt;no-reply@spark.ai&gt;</span></div>
+          <div class="efr"><span class="efr-lbl">From</span><span class="efr-val">notifications@app.heysynk.app &lt;no-reply@app.heysynk.app&gt;</span></div>
           <div class="efr"><span class="efr-lbl">To</span><span class="efr-val">${escHTML(recipientEmail)}</span></div>
           <div class="efr"><span class="efr-lbl">Subject</span><span class="efr-val efr-subject">${escHTML(emailData.subject)}</span></div>
           <div class="efr"><span class="efr-lbl">Time</span><span class="efr-val">${new Date().toLocaleString()}</span></div>
@@ -5579,7 +5579,7 @@ function renderAdminWorkspace() {
     + '<div class="admin-field"><label>Industry / Tagline</label><input class="admin-input" id="wsTagline" value="' + tenant.tagline + '"></div>'
     + '</div>'
     + '<div class="admin-row">'
-    + '<div class="admin-field"><label>Workspace URL</label><input class="admin-input" readonly value="spark.ai/' + tenant.name.toLowerCase().replace(/ /g,'') + '"><div class="admin-input-hint">Cannot be changed</div></div>'
+    + '<div class="admin-field"><label>Workspace URL</label><input class="admin-input" readonly value="app.heysynk.app/' + tenant.name.toLowerCase().replace(/ /g,'') + '"><div class="admin-input-hint">Cannot be changed</div></div>'
     + '<div class="admin-field"><label>Plan</label><input class="admin-input" readonly value="' + tenant.plan + ' Plan"></div>'
     + '</div>'
     + '<button class="admin-save-btn" onclick="saveWorkspaceSettings()">Save Changes</button>'
@@ -6463,7 +6463,7 @@ function showSuperAdminLoginStep() {
     document.getElementById('tenantPreview').innerHTML =
       '<div class="tenant-logo" style="background:linear-gradient(135deg,#0f172a,#1e293b);border:1px solid rgba(255,255,255,0.1)">'
       + '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></div>'
-      + '<div class="tenant-info-login"><div class="t-name">HeySync Platform</div><div class="t-meta">Super Admin Access</div></div>';
+      + '<div class="tenant-info-login"><div class="t-name">heySynk Platform</div><div class="t-meta">Super Admin Access</div></div>';
     var sel = document.getElementById('agentSelect');
     sel.innerHTML = '<option value="sa">admin@heysynk.app</option>';
     sel.disabled = true;
@@ -7207,7 +7207,7 @@ function buildChatWidgetHTML() {
     + '<svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>'
     + '</button>'
     + '</div>'
-    + (widgetConfig.showBranding ? '<div class="cw-powered">Powered by <a href="https://heysynk.app" target="_blank">HeySync</a></div>' : '')
+    + (widgetConfig.showBranding ? '<div class="cw-powered">Powered by <a href="https://heysynk.app" target="_blank">heySynk</a></div>' : '')
     + '</div>'
     + '</div>'  // cw-screens
     + '</div>'  // cw-window
